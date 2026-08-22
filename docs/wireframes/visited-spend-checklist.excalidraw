@@ -1,0 +1,154 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "header-text",
+      "type": "text",
+      "x": 40, "y": 30, "width": 200, "height": 28, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 5001, "version": 1,
+      "versionNonce": 500001, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Day 1 Checklist", "fontSize": 22, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 20,
+      "containerId": null, "originalText": "Day 1 Checklist", "lineHeight": 1.25
+    },
+    {
+      "id": "progress-bg",
+      "type": "rectangle",
+      "x": 40, "y": 75, "width": 320, "height": 24, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "#e9ecef",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 5002, "version": 1,
+      "versionNonce": 500002, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "progress-fill",
+      "type": "rectangle",
+      "x": 40, "y": 75, "width": 218, "height": 24, "angle": 0,
+      "strokeColor": "#e8590c", "backgroundColor": "#ffd8a8",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 5003, "version": 1,
+      "versionNonce": 500003, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "percent-label",
+      "type": "text",
+      "x": 40, "y": 105, "width": 320, "height": 20, "angle": 0,
+      "strokeColor": "#495057", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 5004, "version": 1,
+      "versionNonce": 500004, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "68% of budget used  —  ₹3200 / ₹15000", "fontSize": 14, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 13,
+      "containerId": null, "originalText": "68% of budget used  —  ₹3200 / ₹15000", "lineHeight": 1.25
+    },
+
+    {
+      "id": "check1-box",
+      "type": "rectangle",
+      "x": 40, "y": 150, "width": 26, "height": 26, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "#2f9e44",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 5005, "version": 1,
+      "versionNonce": 500005, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "check1-mark",
+      "type": "text",
+      "x": 46, "y": 150, "width": 20, "height": 24, "angle": 0,
+      "strokeColor": "#ffffff", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 5006, "version": 1,
+      "versionNonce": 500006, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "✓", "fontSize": 18, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 16,
+      "containerId": null, "originalText": "✓", "lineHeight": 1.25
+    },
+    {
+      "id": "check1-label",
+      "type": "text",
+      "x": 80, "y": 152, "width": 280, "height": 22, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 5007, "version": 1,
+      "versionNonce": 500007, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Baga Beach — ₹200 (visited)", "fontSize": 16, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 14,
+      "containerId": null, "originalText": "Baga Beach — ₹200 (visited)", "lineHeight": 1.25
+    },
+
+    {
+      "id": "check2-box",
+      "type": "rectangle",
+      "x": 40, "y": 195, "width": 26, "height": 26, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 5008, "version": 1,
+      "versionNonce": 500008, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "check2-label",
+      "type": "text",
+      "x": 80, "y": 197, "width": 280, "height": 22, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 5009, "version": 1,
+      "versionNonce": 500009, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Hotel Sunrise — ₹1800", "fontSize": 16, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 14,
+      "containerId": null, "originalText": "Hotel Sunrise — ₹1800", "lineHeight": 1.25
+    },
+
+    {
+      "id": "check3-box",
+      "type": "rectangle",
+      "x": 40, "y": 240, "width": 26, "height": 26, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 5010, "version": 1,
+      "versionNonce": 500010, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "check3-label",
+      "type": "text",
+      "x": 80, "y": 242, "width": 280, "height": 22, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 5011, "version": 1,
+      "versionNonce": 500011, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Spice Route Cafe — ₹450", "fontSize": 16, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 14,
+      "containerId": null, "originalText": "Spice Route Cafe — ₹450", "lineHeight": 1.25
+    }
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}

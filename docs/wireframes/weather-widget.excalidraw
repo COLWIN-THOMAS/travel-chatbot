@@ -1,0 +1,90 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "widget-card",
+      "type": "rectangle",
+      "x": 40, "y": 40, "width": 320, "height": 110, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "#e7f5ff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 3001, "version": 1,
+      "versionNonce": 300001, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "weather-icon",
+      "type": "ellipse",
+      "x": 55, "y": 60, "width": 70, "height": 70, "angle": 0,
+      "strokeColor": "#1971c2", "backgroundColor": "#a5d8ff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 3002, "version": 1,
+      "versionNonce": 300002, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "icon-label",
+      "type": "text",
+      "x": 70, "y": 87, "width": 45, "height": 20, "angle": 0,
+      "strokeColor": "#1971c2", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 3003, "version": 1,
+      "versionNonce": 300003, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "ICON", "fontSize": 12, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 11,
+      "containerId": null, "originalText": "ICON", "lineHeight": 1.25
+    },
+    {
+      "id": "temp-text",
+      "type": "text",
+      "x": 140, "y": 55, "width": 100, "height": 40, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 3004, "version": 1,
+      "versionNonce": 300004, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "28°C", "fontSize": 32, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 28,
+      "containerId": null, "originalText": "28°C", "lineHeight": 1.25
+    },
+    {
+      "id": "condition-text",
+      "type": "text",
+      "x": 140, "y": 100, "width": 180, "height": 20, "angle": 0,
+      "strokeColor": "#495057", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 3005, "version": 1,
+      "versionNonce": 300005, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Partly cloudy", "fontSize": 16, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 14,
+      "containerId": null, "originalText": "Partly cloudy", "lineHeight": 1.25
+    },
+    {
+      "id": "advisory-text",
+      "type": "text",
+      "x": 55, "y": 128, "width": 290, "height": 20, "angle": 0,
+      "strokeColor": "#e8590c", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 3006, "version": 1,
+      "versionNonce": 300006, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Pack a rain jacket today", "fontSize": 13, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 12,
+      "containerId": null, "originalText": "Pack a rain jacket today", "lineHeight": 1.25
+    }
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}

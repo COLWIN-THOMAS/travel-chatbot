@@ -1,0 +1,126 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "card-outer",
+      "type": "rectangle",
+      "x": 40, "y": 40, "width": 280, "height": 380, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 1001, "version": 1,
+      "versionNonce": 100001, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "img-placeholder",
+      "type": "rectangle",
+      "x": 60, "y": 60, "width": 240, "height": 140, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "#e9ecef",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "dashed",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1002, "version": 1,
+      "versionNonce": 100002, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "img-label",
+      "type": "text",
+      "x": 150, "y": 120, "width": 60, "height": 25, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1003, "version": 1,
+      "versionNonce": 100003, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "IMG", "fontSize": 20, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 18,
+      "containerId": null, "originalText": "IMG", "lineHeight": 1.25
+    },
+    {
+      "id": "hotel-name",
+      "type": "text",
+      "x": 60, "y": 215, "width": 220, "height": 30, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1004, "version": 1,
+      "versionNonce": 100004, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Hotel Sunrise", "fontSize": 22, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 20,
+      "containerId": null, "originalText": "Hotel Sunrise", "lineHeight": 1.25
+    },
+    {
+      "id": "price-text",
+      "type": "text",
+      "x": 60, "y": 255, "width": 120, "height": 25, "angle": 0,
+      "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1005, "version": 1,
+      "versionNonce": 100005, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "₹1800/night", "fontSize": 18, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 16,
+      "containerId": null, "originalText": "₹1800/night", "lineHeight": 1.25
+    },
+    {
+      "id": "badge-box",
+      "type": "rectangle",
+      "x": 190, "y": 250, "width": 130, "height": 32, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "#ebfbee",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 1006, "version": 1,
+      "versionNonce": 100006, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "badge-text",
+      "type": "text",
+      "x": 197, "y": 258, "width": 116, "height": 20, "angle": 0,
+      "strokeColor": "#2f9e44", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1007, "version": 1,
+      "versionNonce": 100007, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Within budget", "fontSize": 14, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 13,
+      "containerId": null, "originalText": "Within budget", "lineHeight": 1.25
+    },
+    {
+      "id": "select-button",
+      "type": "rectangle",
+      "x": 60, "y": 340, "width": 240, "height": 50, "angle": 0,
+      "strokeColor": "#1971c2", "backgroundColor": "#a5d8ff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": { "type": 3 }, "seed": 1008, "version": 1,
+      "versionNonce": 100008, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false
+    },
+    {
+      "id": "select-text",
+      "type": "text",
+      "x": 155, "y": 355, "width": 60, "height": 25, "angle": 0,
+      "strokeColor": "#1971c2", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 1, "opacity": 100, "groupIds": [], "frameId": null,
+      "roundness": null, "seed": 1009, "version": 1,
+      "versionNonce": 100009, "isDeleted": false, "boundElements": null,
+      "updated": 1, "link": null, "locked": false,
+      "text": "Select", "fontSize": 18, "fontFamily": 1,
+      "textAlign": "left", "verticalAlign": "top", "baseline": 16,
+      "containerId": null, "originalText": "Select", "lineHeight": 1.25
+    }
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}
