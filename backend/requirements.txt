@@ -1,0 +1,12 @@
+alembic==1.16.5
+anthropic==0.125.0
+bcrypt==5.0.0
+email-validator==2.3.0
+fastapi==0.128.8
+httpx==0.28.1
+psycopg2-binary==2.9.12
+pydantic==2.13.4
+python-dotenv==1.2.1
+python-jose==3.5.0
+SQLAlchemy==2.0.52
+uvicorn==0.39.0

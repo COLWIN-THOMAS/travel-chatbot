@@ -1,158 +1,110 @@
 # API Contract
 
-## POST /chat
-The core endpoint — every message in the conversation flow (conversation-flow.md) goes through this.
+Base URL in development: `http://127.0.0.1:8000`. Interactive docs: `/docs`.
 
-**Request body:**
+Conventions
+- JSON everywhere. Money is in **Indian rupees (₹)**. Ids are UUIDs.
+- Every route except `/health*`, `/auth/register`, `/auth/login` and the signed `/places/photo` URL needs `Authorization: Bearer <token>`.
+- Other people's trips/sessions return **404** (not 403) so ids can't be probed.
+- Errors: `{"detail": "message"}`; validation errors (422) use FastAPI's `{"detail": [{"loc": [...], "msg": "..."}]}`.
+- Upstream problems: `503` = assistant (LLM) unavailable, `502` = places/weather provider unavailable, `429` = daily chat limit. Messages are generic; details are in the server log.
+
+## Auth
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| POST | `/auth/register` | `{email, password}` (password 8–72 bytes) | `201 {access_token, token_type, user:{id,email}}`; `409` if the email exists |
+| POST | `/auth/login` | `{email, password}` | `{access_token, token_type, user}`; `401` for wrong email **or** password (identical response) |
+| GET | `/auth/me` | – | `{id, email}` |
+
+## Chat — `POST /chat`
+
+The conversation engine (see `conversation-flow.md`). The client generates a `session_id` (UUID) when a chat starts and sends it on every call; that is how the server remembers earlier answers before a trip exists.
+
+Request
+```json
+{ "session_id": "uuid", "message": "Goa, 15k, 4 days, love food" }
+```
+`message`: 1–1000 chars, not blank.
+
+Response
 ```json
 {
-  "trip_id": "uuid or null (null until CONFIRM creates the Trip)",
-  "message": "the user's text"
+  "session_id": "uuid",
+  "reply_text": "Here's your trip: ...",
+  "conversation_state": "COLLECTING | CONFIRM | GENERATE_PLAN | POST_PLAN | FALLBACK",
+  "extracted_fields": { "destination": "Goa", "budget_total": 15000, "days_count": 4, "preferences": ["food"] },
+  "trip_id": "uuid | null",
+  "itinerary": { "days": [ ... ] } ,
+  "actions": ["mark_visited", "log_expense", "update_plan"]
 }
 ```
+- `extracted_fields` is the **cumulative** set of details collected so far.
+- `conversation_state` is `FALLBACK` for a turn where nothing usable was understood; the session stays in its previous state.
+- `GENERATE_PLAN` is returned once, on the turn the plan is created (`trip_id` and `itinerary` are set); afterwards the session is in `POST_PLAN`.
+- `itinerary` is non-null only when a plan was created or rebuilt; `actions` lists what the assistant did in `POST_PLAN` so the client can refresh.
 
-**Response body:**
+`GET /chat/{session_id}` → `{session_id, state, slots, trip_id, messages:[{role, content, created_at}]}` in order. An unknown session returns an empty history (state `COLLECTING`); another user's session is `404`.
+
+## Trips
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/trips` | `{destination, budget_total (>0), days_count (1–14), preferences[]}` → `201` trip. Normally the chat creates trips; this is for tests/manual use. |
+| GET | `/trips` | Current user's trips, newest first |
+| GET | `/trips/{trip_id}` | Trip + `days[].items[]` (see Itinerary) |
+| DELETE | `/trips/{trip_id}` | `204`; cascades to days, items, expenses, chat messages |
+
+Trip: `{id, user_id, destination, budget_total, days_count, preferences, status ("planning"|"active"|"completed"), created_at}`
+
+## Itinerary
+
+`GET /itinerary/{trip_id}` → `{days: [Day]}`
+
 ```json
 {
-  "reply_text": "what the bot says back",
-  "conversation_state": "GREETING | COLLECTING | CONFIRM | GENERATE_PLAN | POST_PLAN | FALLBACK",
-  "extracted_fields": { "destination": "Goa", "budget_total": null, "days_count": null, "preferences": null },
-  "trip_id": "uuid (set once CONFIRM creates the Trip, otherwise same as request or null)",
-  "itinerary": "null, unless conversation_state is GENERATE_PLAN — then the full day-wise plan"
+  "id": "uuid", "day_number": 1, "date": null,
+  "estimated_total": 2300.0, "spend_so_far": 0.0,
+  "items": [{
+    "id": "uuid", "place_name": "Baga Beach", "category": "attraction | hotel | restaurant | transport",
+    "estimated_cost": 0.0, "actual_cost": 0.0, "visited": false, "order_in_day": 1, "notes": null
+  }]
 }
 ```
+`actual_cost` and `spend_so_far` are **derived** (sum of expenses linked to the item / day's items), never stored.
 
-`conversation_state` in the response is what the frontend uses to know how to render the current turn (e.g. show a "confirm/edit" button pair only when state is `CONFIRM`) — this is why it's part of every response, not just an internal backend detail.
+`POST /itinerary/{trip_id}/regenerate` — body `{"changes": {budget_total?, days_count?, preferences?, instructions?}}`. Rebuilds the whole plan (visited flags reset; expenses stay but are unlinked from removed items). `422` if no plan fits the constraints; `503` if the LLM is down. Response: same as `GET /itinerary/{trip_id}`.
 
----
+## Tracker
 
-## POST /trips
-Rarely called directly by the frontend (normally /chat creates the Trip at CONFIRM) — useful for testing the backend before the chat flow works, or letting a user start a second trip manually.
+| Method | Path | Body → Response |
+|---|---|---|
+| POST | `/tracker/{trip_id}/visit` | `{itinerary_item_id, visited}` → updated item |
+| POST | `/tracker/{trip_id}/expense` | `{amount (>0), category?, itinerary_item_id?}` → `201 {expense, spend_total, budget_remaining}` |
+| GET | `/tracker/{trip_id}/expenses` | newest first |
+| DELETE | `/tracker/{trip_id}/expense/{expense_id}` | `204` |
+| GET | `/tracker/{trip_id}` | `{spend_total, budget_total, remaining, percent_used, items_total, items_visited, spent_by_category}` |
 
-**Request body:**
-```json
-{ "destination": "Goa", "budget_total": 15000, "days_count": 4, "preferences": ["food", "adventure"] }
-```
+An `itinerary_item_id` from another trip is rejected with `404`.
 
-**Response body:** the created Trip row (id, user_id, destination, budget_total, days_count, preferences, status, created_at)
+## Places (Google Places API, New)
 
----
+| Method | Path | Response |
+|---|---|---|
+| GET | `/places/{trip_id}?category=hotel\|restaurant\|attraction` | `{places:[{id, name, category, price_level, rating, address}]}` for the trip's destination |
+| GET | `/places/detail/{place_id}` | `{id, name, address, rating, price_level, opening_hours[], website, phone, description, photos[], reviews[{author_name, rating, text}]}` |
+| GET | `/places/photo?name=&w=&exp=&sig=` | image bytes; **only** for URLs signed by the server (returned in `photos`), valid ~6 h |
 
-## GET /trips/{trip_id}
-Fetch one trip with everything nested inside it.
+- `price_level` is Google's tier text (`Free`, `Inexpensive`, `Moderate`, `Expensive`, `Very Expensive`) or `null` — Google does not supply rupee prices, so none are invented.
+- The list uses Pro-tier fields only; photos/reviews come from the detail call (Enterprise + Atmosphere SKU), which fires once per place a user opens.
+- `photos` are relative signed URLs; the Google API key never reaches clients.
 
-**Response body:**
-```json
-{
-  "id": "...", "destination": "Goa", "budget_total": 15000, "days_count": 4, "status": "active",
-  "days": [
-    { "day_number": 1, "items": [ { "place_name": "Baga Beach", "category": "attraction", "estimated_cost": 200, "visited": false, "order_in_day": 1 } ] }
-  ]
-}
-```
+## Weather
 
----
+`GET /weather/{trip_id}` → `{destination, days:[{day_number, date, temp_max, temp_min, condition, icon, precipitation_probability, advisory}]}`
 
-## GET /itinerary/{trip_id}
-Same nested `days[].items[]` shape as above, but without the trip-level fields — use this when a screen only needs the plan, not the whole trip object.
+Forecast for the next `days_count` days starting today (Open-Meteo; destination resolved via OpenStreetMap Nominatim). Trips have no fixed dates, so Day *k* maps to today + (k−1).
 
----
+## Health
 
-## POST /itinerary/{trip_id}/regenerate
-
-**Request body:**
-```json
-{ "changes": { "budget_total": 20000 } }
-```
-
-**Response body:** same shape as GET /itinerary/{trip_id}, updated
-
----
-
-## POST /tracker/{trip_id}/visit
-Mark a place visited.
-
-**Request body:**
-```json
-{ "itinerary_item_id": "uuid", "visited": true }
-```
-
-**Response body:** the updated ItineraryItem
-
----
-
-## POST /tracker/{trip_id}/expense
-Log an expense.
-
-**Request body:**
-```json
-{ "amount": 250, "category": "food", "itinerary_item_id": "uuid or null" }
-```
-
-**Response body:**
-```json
-{
-  "expense": { "id": "...", "amount": 250, "category": "food" },
-  "spend_total": 3200,
-  "budget_remaining": 11800
-}
-```
-
----
-
-## GET /tracker/{trip_id}
-Spend-vs-budget summary — powers the progress bar on the checklist screen.
-
-**Response body:**
-```json
-{
-  "spend_total": 3200,
-  "budget_total": 15000,
-  "remaining": 11800,
-  "percent_used": 21.3
-}
-```
-
----
-
-## GET /places/{trip_id}
-Suggestions for the trip's destination — feeds the hotel cards and restaurant list screens.
-
-**Query params:** `category` — one of `hotel` | `restaurant` | `attraction`
-
-**Response body:**
-```json
-{
-  "places": [
-    {
-      "id": "uuid",
-      "name": "Hotel Sunrise",
-      "category": "hotel",
-      "cost_estimate": 1800,
-      "rating": 4.2,
-      "description": "Beachfront stay, 10 min from Baga Beach"
-    }
-  ]
-}
-```
-
-Note: this reads from wherever you source place data (a places API, or your own curated dataset — decide this in Module B1). It does not read from `itinerary_items` — those are places already *chosen* into the plan; `/places` is the browse/suggestion list before choosing.
-
----
-
-## GET /places/detail/{place_id}
-Full detail view for one place — feeds the place-guide detail screen.
-
-**Response body:**
-```json
-{
-  "id": "uuid",
-  "name": "Hotel Sunrise",
-  "category": "hotel",
-  "cost_estimate": 1800,
-  "rating": 4.2,
-  "description": "Beachfront stay, 10 min from Baga Beach",
-  "opening_hours": "24 hours (check-in 12pm)",
-  "images": ["url1", "url2"]
-}
-```
+`GET /health` → `{"status":"ok"}` · `GET /health/db` → `{"database":"connected"}` or `503`.

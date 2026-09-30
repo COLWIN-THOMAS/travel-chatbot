@@ -1,0 +1,22 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# OS
+.DS_Store
+
+# Node / Expo (for later, frontend)
+node_modules/
+.expo/
+
+# Frontend build output
+frontend/dist/
+frontend/.expo/
+
+# Test / tool caches
+.pytest_cache/
+.env.local
