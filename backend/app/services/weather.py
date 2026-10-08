@@ -1,5 +1,6 @@
 import threading
 import time
+from datetime import date as date_type, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -93,9 +94,12 @@ def geocode(destination: str) -> dict:
     return place
 
 
-def forecast_for(destination: str, days: int) -> dict:
-    days = max(1, min(days, 14))
-    key = (destination.strip().lower(), days)
+FORECAST_WINDOW_DAYS = 16  # the longest range Open-Meteo forecasts
+
+
+def _forecast_window(destination: str) -> dict:
+    """The next 16 days at the destination, cached per destination: {"destination": name, "days": [entry with date]}."""
+    key = destination.strip().lower()
     now = time.time()
     with _lock:
         hit = _cache.get(key)
@@ -111,7 +115,7 @@ def forecast_for(destination: str, days: int) -> dict:
             "longitude": place["longitude"],
             "daily": "weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
             "timezone": "auto",
-            "forecast_days": days,
+            "forecast_days": FORECAST_WINDOW_DAYS,
         },
     )
     daily = data.get("daily") or {}
@@ -124,7 +128,6 @@ def forecast_for(destination: str, days: int) -> dict:
         label, icon = describe_code(code)
         out.append(
             {
-                "day_number": i + 1,
                 "date": date,
                 "temp_max": tmax,
                 "temp_min": tmin,
@@ -140,3 +143,32 @@ def forecast_for(destination: str, days: int) -> dict:
             _cache.clear()
         _cache[key] = (now, result)
     return result
+
+
+def forecast_for(destination: str, days: int, start_date: Optional[date_type] = None) -> dict:
+    """Forecast for a trip. With a start date, Day k is matched to start_date + (k-1) by calendar date; days outside the
+    16-day forecast window (too far ahead, or already over) are left out, with a note. Without dates (older trips),
+    Day k maps to today + (k-1)."""
+    days = max(1, min(days, 14))
+    window = _forecast_window(destination)
+    entries = window["days"]
+    note = None
+
+    if start_date is None:
+        picked = [dict(e, day_number=i + 1) for i, e in enumerate(entries[:days])]
+    else:
+        by_date = {e["date"]: e for e in entries}
+        picked = []
+        for k in range(1, days + 1):
+            e = by_date.get((start_date + timedelta(days=k - 1)).isoformat())
+            if e:
+                picked.append(dict(e, day_number=k))
+        if len(picked) < days and entries:
+            last = entries[-1]["date"]
+            if start_date.isoformat() > last:
+                note = "Forecasts only reach {}. Check back closer to your trip.".format(last)
+            elif picked:
+                note = "Forecast shown only for days within the next {} days.".format(FORECAST_WINDOW_DAYS)
+            else:
+                note = "No forecast available for these dates (the trip is already over)."
+    return {"destination": window["destination"], "days": picked, "note": note}

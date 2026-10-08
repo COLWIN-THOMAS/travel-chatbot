@@ -2,8 +2,10 @@ import { api, ApiError, extractMessage, photoUrl, setAuthToken, setUnauthorizedH
 import { uuid4 } from '../lib/uuid';
 
 // randomUUID is unavailable in insecure browser contexts; exercise the getRandomValues fallback with real entropy.
+// jest.mock factories run before imports are bound, so they can only reference `require` (Jest allow-lists it).
 jest.mock('expo-crypto', () => ({
   randomUUID: () => { throw new Error('crypto.randomUUID is not available'); },
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   getRandomValues: (a: Uint8Array) => require('crypto').randomFillSync(a),
 }));
 

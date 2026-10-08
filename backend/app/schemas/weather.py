@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -16,3 +16,4 @@ class DayForecast(BaseModel):
 class WeatherResponse(BaseModel):
     destination: str
     days: List[DayForecast] = []
+    note: Optional[str] = None  # e.g. why some trip days have no forecast yet

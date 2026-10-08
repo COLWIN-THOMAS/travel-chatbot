@@ -19,12 +19,12 @@ from app.models.chat_session import ChatSession
 from app.models.trip import Trip
 from app.models.user import User
 from app.schemas.trip import clean_preferences
-from app.services import assistant, llm, planner
+from app.services import assistant, dates, llm, planner
 from app.services.itinerary_view import load_days
 
 log = logging.getLogger(__name__)
 
-SLOT_ORDER = ["destination", "budget_total", "days_count", "preferences"]
+SLOT_ORDER = ["destination", "budget_total", "days_count", "start_date", "preferences"]
 MAX_LLM_FALLBACKS = 2  # consecutive; after that, a canned reprompt (no API cost)
 MAX_BUDGET = 10_000_000
 
@@ -32,6 +32,7 @@ QUESTIONS = {
     "destination": "Where would you like to go?",
     "budget_total": "What's your total budget for the trip (in ₹)?",
     "days_count": "How many days will you be travelling?",
+    "start_date": "Which day do you start? Pick your dates on the calendar, or tell me (for example \"15 Nov\"). If you haven't decided yet, say so.",
     "preferences": "What do you enjoy most? For example: food, adventure, culture, relaxed, nightlife, shopping.",
 }
 
@@ -60,15 +61,29 @@ def describe(field: str, value) -> str:
         return "budget {}".format(inr(value))
     if field == "days_count":
         return "{} day{}".format(value, "" if value == 1 else "s")
+    if field == "start_date":
+        if value == dates.UNDECIDED:
+            return "dates not fixed yet"
+        return "starting {}".format(dates.pretty(dates.parse_iso(value)))
     return "interests: {}".format(", ".join(value))
+
+
+def dates_line(slots: dict) -> str:
+    start = dates.parse_iso(slots.get("start_date")) if slots.get("start_date") != dates.UNDECIDED else None
+    if start is None:
+        return "Not fixed yet (you can add them later)"
+    return dates.pretty_range(start, slots["days_count"])
 
 
 def recap(slots: dict) -> str:
     return (
         "Here's your trip:\n"
-        "• Destination: {}\n• Budget: {}\n• Days: {}\n• Interests: {}\n\n"
+        "• Destination: {}\n• Budget: {}\n• Days: {}\n• Dates: {}\n• Interests: {}\n\n"
         "Shall I build the plan? Reply \"yes\" to confirm, or tell me what to change."
-    ).format(slots["destination"], inr(slots["budget_total"]), slots["days_count"], ", ".join(slots["preferences"]))
+    ).format(
+        slots["destination"], inr(slots["budget_total"]), slots["days_count"], dates_line(slots),
+        ", ".join(slots["preferences"]),
+    )
 
 
 def merge_slots(slots: dict, extraction: llm.Extraction) -> Tuple[dict, dict, List[str]]:
@@ -99,12 +114,33 @@ def merge_slots(slots: dict, extraction: llm.Extraction) -> Tuple[dict, dict, Li
         else:
             errors.append("I can plan trips of 1 to 14 days.")
 
+    if extraction.start_date:
+        start = dates.parse_iso(extraction.start_date)
+        if start is None:
+            errors.append("I couldn't read that date - try something like 15 Nov.")
+        else:
+            problem = dates.check_new_trip_date(start)
+            if problem:
+                errors.append(problem)
+            elif start.isoformat() != new.get("start_date"):
+                new["start_date"], changed["start_date"] = start.isoformat(), start.isoformat()
+    elif extraction.dates_undecided and new.get("start_date") != dates.UNDECIDED:
+        new["start_date"], changed["start_date"] = dates.UNDECIDED, dates.UNDECIDED
+
     if extraction.preferences is not None:
         prefs = clean_preferences(extraction.preferences)
         if prefs and prefs != new.get("preferences"):
             new["preferences"], changed["preferences"] = prefs, prefs
 
     return new, changed, errors
+
+
+def next_field(session: ChatSession) -> Optional[str]:
+    """Which detail the assistant is currently asking for (drives the calendar button in the app)."""
+    if session.state not in ("COLLECTING", "FALLBACK"):
+        return None
+    missing = missing_slots(session.slots or {})
+    return missing[0] if missing else None
 
 
 def _get_session(db: Session, user: User, session_id: uuid.UUID) -> ChatSession:
@@ -205,6 +241,7 @@ def _generate(db, session, slots) -> dict:
         destination=slots["destination"],
         budget_total=slots["budget_total"],
         days_count=slots["days_count"],
+        start_date=(None if slots.get("start_date") == dates.UNDECIDED else dates.parse_iso(slots["start_date"])),
         preferences=slots["preferences"],
     )
     db.add(trip)
@@ -213,10 +250,11 @@ def _generate(db, session, slots) -> dict:
     session.slots, session.trip_id, session.state, session.fallback_count = slots, trip.id, "POST_PLAN", 0
     db.execute(update(ChatMessage).where(ChatMessage.session_id == session.id).values(trip_id=trip.id))
     total = planner.plan_total(plan)
+    when = " ({})".format(dates.pretty_range(trip.start_date, trip.days_count)) if trip.start_date else ""
     reply = (
-        "Your {}-day {} plan is ready! Estimated total {} of your {} budget. "
+        "Your {}-day {} plan{} is ready! Estimated total {} of your {} budget. "
         "You can ask me to mark places visited, log expenses, or tweak the plan."
-    ).format(slots["days_count"], slots["destination"], inr(total), inr(slots["budget_total"]))
+    ).format(slots["days_count"], slots["destination"], when, inr(total), inr(slots["budget_total"]))
     return {"reply": reply, "state": "GENERATE_PLAN", "extracted": None, "trip": trip, "plan_changed": True}
 
 
@@ -257,6 +295,7 @@ def handle_turn(db: Session, user: User, session_id: uuid.UUID, message: str) ->
         "reply_text": result["reply"],
         "conversation_state": result["state"],
         "extracted_fields": session.slots,
+        "next_field": next_field(session),
         "trip_id": session.trip_id,
         "itinerary": itinerary,
         "actions": result.get("actions", []),

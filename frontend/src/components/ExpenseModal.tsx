@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { parseAmount } from '../lib/format';
 import { colors, radius, space } from '../lib/theme';
@@ -23,9 +23,12 @@ export function ExpenseModal({ visible, items, presetItemId, loading, error, onC
   const [itemId, setItemId] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
 
-  useEffect(() => {
+  // Reset the form whenever the modal (re)opens — done during render, not an effect (see DatePicker).
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) { setAmount(''); setCategory('food'); setItemId(presetItemId ?? null); setTouched(false); }
-  }, [visible, presetItemId]);
+  }
 
   const parsed = parseAmount(amount);
   const amountError = touched && parsed === null ? 'Enter an amount greater than 0' : null;

@@ -23,7 +23,7 @@ def chat(payload: ChatRequest, db: Session = Depends(get_db), user: User = Depen
 def history(session_id: uuid.UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     session = db.get(ChatSession, session_id)
     if session is None:  # a brand-new conversation: nothing stored yet
-        return {"session_id": session_id, "state": "COLLECTING", "slots": {}, "trip_id": None, "messages": []}
+        return {"session_id": session_id, "state": "COLLECTING", "slots": {}, "next_field": "destination", "trip_id": None, "messages": []}
     if session.user_id != user.id:
         raise HTTPException(status_code=404, detail="Session not found")
     messages = (
@@ -36,6 +36,7 @@ def history(session_id: uuid.UUID, db: Session = Depends(get_db), user: User = D
         "session_id": session.id,
         "state": session.state,
         "slots": session.slots or {},
+        "next_field": conversation.next_field(session),
         "trip_id": session.trip_id,
         "messages": messages,
     }

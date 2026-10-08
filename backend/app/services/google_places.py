@@ -17,9 +17,10 @@ CATEGORY_QUERY_TERMS = {
 }
 
 # Pro-tier fields only (cheaper, larger free quota). Photos/reviews live on the detail call.
-SEARCH_FIELD_MASK = "places.id,places.displayName,places.rating,places.priceLevel,places.formattedAddress"
+# `location` (lat/lng) is Essentials-tier - no extra cost - and is what the deep-link builders need.
+SEARCH_FIELD_MASK = "places.id,places.displayName,places.rating,places.priceLevel,places.formattedAddress,places.location"
 DETAIL_FIELD_MASK = (
-    "id,displayName,formattedAddress,rating,priceLevel,currentOpeningHours,"
+    "id,displayName,formattedAddress,location,rating,priceLevel,currentOpeningHours,"
     "websiteUri,nationalPhoneNumber,photos,reviews,editorialSummary"
 )
 

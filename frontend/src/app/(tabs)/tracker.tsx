@@ -6,6 +6,7 @@ import { ExpenseModal } from '../../components/ExpenseModal';
 import { NoTrip } from '../../components/NoTrip';
 import { Button, Card, ProgressBar, SectionTitle, StateView } from '../../components/ui';
 import { confirmAction } from '../../lib/confirm';
+import { formatShort } from '../../lib/dates';
 import { budgetTone, inr } from '../../lib/format';
 import {
   useActiveTrip, useDeleteExpense, useExpenses, useItinerary, useLogExpense, useToggleVisited, useTracker,
@@ -80,7 +81,7 @@ export default function TrackerScreen() {
         {days.map((d) => (
           <View key={d.id}>
             <SectionTitle right={<Text style={styles.meta}>est {inr(d.estimated_total)} {'\u2022'} spent {inr(d.spend_so_far)}</Text>}>
-              Day {d.day_number}
+              Day {d.day_number}{d.date ? ` \u2022 ${formatShort(d.date)}` : ''}
             </SectionTitle>
             <Card>
               {d.items.map((item, i) => (

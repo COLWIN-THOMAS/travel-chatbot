@@ -8,6 +8,8 @@ class PlaceSummary(BaseModel):
     price_level: Optional[str] = None
     rating: Optional[float] = None
     address: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
 
 class PlacesListResponse(BaseModel):
     places: List[PlaceSummary]
@@ -21,6 +23,8 @@ class PlaceDetail(BaseModel):
     id: str
     name: str
     address: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
     rating: Optional[float] = None
     price_level: Optional[str] = None
     opening_hours: Optional[List[str]] = None

@@ -4,15 +4,28 @@ export type PlaceCategory = 'hotel' | 'restaurant' | 'attraction';
 export interface User { id: string; email: string }
 export interface TokenResponse { access_token: string; token_type: string; user: User }
 
+export type TripPhase = 'undated' | 'upcoming' | 'ongoing' | 'completed';
+
 export interface Trip {
   id: string;
   user_id: string;
   destination: string;
   budget_total: number;
   days_count: number;
+  start_date: string | null; // YYYY-MM-DD; null = dates not decided
+  end_date: string | null;
+  phase: TripPhase;
   preferences: string[] | null;
   status: string;
   created_at: string;
+}
+
+/** A trip as listed in the history: the trip plus how it actually went. */
+export interface TripSummary extends Trip {
+  estimated_total: number;
+  spend_total: number;
+  items_total: number;
+  items_visited: number;
 }
 
 export interface ItineraryItem {
@@ -55,7 +68,21 @@ export interface Expense {
   logged_at: string | null;
 }
 
-export interface ExpenseLogResponse { expense: Expense; spend_total: number; budget_remaining: number }
+export interface ItineraryNotice {
+  rebalanced: boolean;
+  message: string;
+  days_from: number | null;
+  days_to: number | null;
+}
+
+export interface VisitResult extends ItineraryItem { itinerary_notice: ItineraryNotice | null }
+
+export interface ExpenseLogResponse {
+  expense: Expense;
+  spend_total: number;
+  budget_remaining: number;
+  itinerary_notice: ItineraryNotice | null;
+}
 
 export interface PlaceSummary {
   id: string;
@@ -64,6 +91,8 @@ export interface PlaceSummary {
   price_level: string | null;
   rating: number | null;
   address: string | null;
+  lat: number | null;
+  lon: number | null;
 }
 
 export interface Review { author_name: string | null; rating: number | null; text: string | null }
@@ -72,6 +101,8 @@ export interface PlaceDetail {
   id: string;
   name: string;
   address: string | null;
+  lat: number | null;
+  lon: number | null;
   rating: number | null;
   price_level: string | null;
   opening_hours: string[] | null;
@@ -92,7 +123,7 @@ export interface DayForecast {
   precipitation_probability: number;
   advisory: string;
 }
-export interface Weather { destination: string; days: DayForecast[] }
+export interface Weather { destination: string; days: DayForecast[]; note: string | null }
 
 export type ConversationState = 'GREETING' | 'COLLECTING' | 'CONFIRM' | 'GENERATE_PLAN' | 'POST_PLAN' | 'FALLBACK';
 
@@ -100,6 +131,7 @@ export interface Slots {
   destination?: string;
   budget_total?: number;
   days_count?: number;
+  start_date?: string; // YYYY-MM-DD, or "undecided"
   preferences?: string[];
 }
 
@@ -108,6 +140,7 @@ export interface ChatResponse {
   reply_text: string;
   conversation_state: ConversationState;
   extracted_fields: Slots;
+  next_field: string | null;
   trip_id: string | null;
   itinerary: Itinerary | null;
   actions: string[];
@@ -119,6 +152,10 @@ export interface ChatHistory {
   session_id: string;
   state: ConversationState;
   slots: Slots;
+  next_field: string | null;
   trip_id: string | null;
   messages: ChatMessage[];
 }
+
+export interface DeepLink { app_url: string | null; web_url: string; prefilled: boolean }
+export interface RideLinks { uber: DeepLink; rapido: DeepLink }

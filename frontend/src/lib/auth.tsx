@@ -15,6 +15,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: (password: string) => Promise<void>;
   retryBoot: () => void;
 }
 
@@ -78,9 +79,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const retryBoot = useCallback(() => { setBootError(null); setBootAttempt((n) => n + 1); }, []);
 
+  // Throws on a wrong password (caller shows the message); only signs out once the account is
+  // actually gone server-side, never optimistically.
+  const deleteAccount = useCallback(async (password: string) => {
+    await api<void>('/auth/me', { method: 'DELETE', body: { password } });
+    await signOut();
+  }, [signOut]);
+
   const value = useMemo(
-    () => ({ status, user, bootError, signIn, register, signOut, retryBoot }),
-    [status, user, bootError, signIn, register, signOut, retryBoot],
+    () => ({ status, user, bootError, signIn, register, signOut, deleteAccount, retryBoot }),
+    [status, user, bootError, signIn, register, signOut, deleteAccount, retryBoot],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

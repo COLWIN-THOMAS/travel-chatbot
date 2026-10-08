@@ -91,3 +91,32 @@ def test_delete_expense(client, auth, trip):
 def test_delete_trip_cascades(client, auth, trip):
     assert client.delete("/trips/" + trip.id, headers=auth.headers).status_code == 204
     assert client.get("/trips/" + trip.id, headers=auth.headers).status_code == 404
+
+
+def test_hotel_search_link_uses_trip_dates_when_set(client, auth):
+    t = client.post("/trips", headers=auth.headers, json={
+        "destination": "Goa", "budget_total": 10000, "days_count": 3, "start_date": "2026-12-10",
+    }).json()
+    r = client.get(f"/trips/{t['id']}/links/hotels", headers=auth.headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert "ss=Goa" in body["web_url"]
+    assert "checkin=2026-12-10" in body["web_url"] and "checkout=2026-12-12" in body["web_url"]
+
+
+def test_hotel_search_link_without_dates_still_returns_a_link(client, auth, trip):
+    r = client.get(f"/trips/{trip.id}/links/hotels", headers=auth.headers)
+    assert r.status_code == 200 and "ss=Goa" in r.json()["web_url"]
+
+
+def test_train_search_link_has_no_fabricated_prefill(client, auth, trip):
+    r = client.get(f"/trips/{trip.id}/links/trains", headers=auth.headers)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["prefilled"] is False and "irctc.co.in" in body["web_url"]
+
+
+def test_trip_links_require_ownership(client, auth, trip):
+    from tests.conftest import register
+    other, _ = register(client)
+    assert client.get(f"/trips/{trip.id}/links/hotels", headers=other).status_code == 404

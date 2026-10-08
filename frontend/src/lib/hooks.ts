@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { api, ApiError } from './api';
+import { notify } from './confirm';
 import { useChatSession } from './session';
 import type {
-  ChatHistory, ChatMessage, ChatResponse, Expense, ExpenseLogResponse, Itinerary, ItineraryItem, PlaceCategory,
-  PlaceDetail, PlaceSummary, TrackerSummary, Trip, Weather,
+  ChatHistory, ChatMessage, ChatResponse, DeepLink, Expense, ExpenseLogResponse, Itinerary, ItineraryNotice,
+  PlaceCategory, PlaceDetail, PlaceSummary, RideLinks, TrackerSummary, Trip, TripSummary, VisitResult, Weather,
 } from './types';
 
 const MIN = 60 * 1000;
@@ -23,7 +24,7 @@ export const keys = {
 /* ---------- trips ---------- */
 
 export function useTrips() {
-  return useQuery({ queryKey: keys.trips, queryFn: () => api<Trip[]>('/trips'), staleTime: MIN });
+  return useQuery({ queryKey: keys.trips, queryFn: () => api<TripSummary[]>('/trips'), staleTime: MIN });
 }
 
 /** The trip the Plan / Tracker / Explore tabs operate on: the stored choice, else the newest trip. */
@@ -47,6 +48,20 @@ export function useDeleteTrip() {
       qc.removeQueries({ queryKey: keys.itinerary(tripId) });
       qc.removeQueries({ queryKey: keys.tracker(tripId) });
       void qc.invalidateQueries({ queryKey: keys.trips });
+    },
+  });
+}
+
+/** Sets (or clears, with null) the trip's start date; every day is re-dated by the server. */
+export function useSetTripDates(tripId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (startDate: string | null) =>
+      api<Trip>(`/trips/${tripId}/dates`, { method: 'PUT', body: { start_date: startDate } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.trips });
+      void qc.invalidateQueries({ queryKey: keys.itinerary(tripId) });
+      void qc.invalidateQueries({ queryKey: keys.weather(tripId) });
     },
   });
 }
@@ -83,11 +98,17 @@ function refreshTripData(qc: ReturnType<typeof useQueryClient>, tripId: string) 
   void qc.invalidateQueries({ queryKey: keys.expenses(tripId) });
 }
 
+/** Shows the auto-rebalance notice, if any — success or "couldn't fit it" are both worth surfacing. */
+function announceRebalance(notice: ItineraryNotice | null) {
+  if (!notice) return;
+  notify(notice.rebalanced ? 'Plan updated' : 'Budget alert', notice.message);
+}
+
 export function useToggleVisited(tripId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: { itemId: string; visited: boolean }) =>
-      api<ItineraryItem>(`/tracker/${tripId}/visit`, { method: 'POST', body: { itinerary_item_id: v.itemId, visited: v.visited } }),
+      api<VisitResult>(`/tracker/${tripId}/visit`, { method: 'POST', body: { itinerary_item_id: v.itemId, visited: v.visited } }),
     // Optimistic: the checkbox flips instantly and rolls back if the server rejects it.
     onMutate: async (v) => {
       await qc.cancelQueries({ queryKey: keys.itinerary(tripId) });
@@ -103,6 +124,7 @@ export function useToggleVisited(tripId: string) {
       return { prev };
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(keys.itinerary(tripId), ctx.prev); },
+    onSuccess: (res) => announceRebalance(res.itinerary_notice),
     onSettled: () => refreshTripData(qc, tripId),
   });
 }
@@ -115,7 +137,7 @@ export function useLogExpense(tripId: string) {
         method: 'POST',
         body: { amount: v.amount, category: v.category ?? null, itinerary_item_id: v.itemId ?? null },
       }),
-    onSuccess: () => refreshTripData(qc, tripId),
+    onSuccess: (res) => { announceRebalance(res.itinerary_notice); refreshTripData(qc, tripId); },
   });
 }
 
@@ -136,7 +158,7 @@ export function useRegenerate(tripId: string) {
         body: { changes: instructions ? { instructions } : {} },
         timeoutMs: 150000,
       }),
-    onSuccess: () => refreshTripData(qc, tripId),
+    onSuccess: () => { refreshTripData(qc, tripId); void qc.invalidateQueries({ queryKey: keys.trips }); },
   });
 }
 
@@ -159,6 +181,34 @@ export function usePlaceDetail(placeId: string) {
   });
 }
 
+export function useRideLink(placeId: string, placeName: string) {
+  return useQuery({
+    queryKey: ['ride-link', placeId],
+    queryFn: () => api<RideLinks>(`/places/detail/${encodeURIComponent(placeId)}/ride-link?name=${encodeURIComponent(placeName)}`),
+    enabled: !!placeId && !!placeName,
+    staleTime: 10 * MIN,
+    retry: 1,
+  });
+}
+
+export function useHotelSearchLink(tripId?: string) {
+  return useQuery({
+    queryKey: ['hotel-link', tripId ?? ''],
+    queryFn: () => api<DeepLink>(`/trips/${tripId}/links/hotels`),
+    enabled: !!tripId,
+    staleTime: 30 * MIN,
+  });
+}
+
+export function useTrainSearchLink(tripId?: string) {
+  return useQuery({
+    queryKey: ['train-link', tripId ?? ''],
+    queryFn: () => api<DeepLink>(`/trips/${tripId}/links/trains`),
+    enabled: !!tripId,
+    staleTime: 30 * MIN,
+  });
+}
+
 export function useWeather(tripId?: string) {
   return useQuery({
     queryKey: keys.weather(tripId ?? ''),
@@ -172,7 +222,7 @@ export function useWeather(tripId?: string) {
 /* ---------- chat ---------- */
 
 const emptyHistory = (sessionId: string): ChatHistory => ({
-  session_id: sessionId, state: 'COLLECTING', slots: {}, trip_id: null, messages: [],
+  session_id: sessionId, state: 'COLLECTING', slots: {}, next_field: 'destination', trip_id: null, messages: [],
 });
 
 export function useChat() {
@@ -213,6 +263,7 @@ export function useChat() {
         ...prev,
         state,
         slots: res.extracted_fields,
+        next_field: res.next_field,
         trip_id: res.trip_id,
         messages: [...prev.messages, { role: 'user', content: text }, { role: 'assistant', content: res.reply_text }],
       });
@@ -229,6 +280,7 @@ export function useChat() {
     messages: history.data?.messages ?? [],
     state: history.data?.state ?? 'COLLECTING',
     slots: history.data?.slots ?? {},
+    nextField: history.data?.next_field ?? null,
     tripId: history.data?.trip_id ?? null,
     isLoading: history.isLoading,
     loadError: history.error,

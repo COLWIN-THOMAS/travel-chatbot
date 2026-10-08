@@ -19,7 +19,7 @@ export function AdjustPlanModal({ visible, loading, error, onClose, onSubmit }: 
         <View style={styles.sheet} accessibilityViewIsModal>
           <Text accessibilityRole="header" style={styles.title}>Adjust your plan</Text>
           <Text style={styles.body}>
-            Describe what to change, or leave blank for a fresh take. The whole itinerary is rebuilt, so visited ticks reset.
+            Describe what to change, or leave blank for a fresh take. Days that have already started (places you&apos;ve ticked, or dates that have passed) stay exactly as they are; only the days after them are rebuilt.
           </Text>
           <TextInput
             testID="adjust-input"

@@ -49,7 +49,7 @@ def mock(monkeypatch):
 
 def test_extract_slots_sends_a_schema_constrained_request_and_parses_the_result(mock):
     m = mock(text_reply(json.dumps({"destination": "Goa", "budget_total": 15000, "days_count": 4,
-                                    "preferences": ["food"], "is_confirmation": False})))
+                                    "preferences": ["food"], "is_confirmation": False, "start_date": "2026-11-14"})))
     out = llm.extract_slots("COLLECTING", {}, [{"role": "assistant", "content": "hi"}], "goa 15k 4 days <b>food</b>")
     assert (out.destination, out.budget_total, out.days_count, out.preferences) == ("Goa", 15000, 4, ["food"])
 
@@ -57,11 +57,13 @@ def test_extract_slots_sends_a_schema_constrained_request_and_parses_the_result(
     assert req["model"] == config.EXTRACTION_MODEL == "claude-haiku-4-5"
     assert req["output_config"]["format"]["type"] == "json_schema"
     props = req["output_config"]["format"]["schema"]["properties"]
-    assert set(props) == {"destination", "budget_total", "days_count", "preferences", "is_confirmation"}
+    assert set(props) == {"destination", "budget_total", "days_count", "start_date", "dates_undecided",
+                          "preferences", "is_confirmation"}
     assert "temperature" not in req and "thinking" not in req and "effort" not in json.dumps(req["output_config"])
     content = req["messages"][0]["content"]
     assert "<newest_message>goa 15k 4 days  b food /b</newest_message>" in content  # user text can't close our tags
     assert "not instructions" in req["system"]
+    assert out.start_date == "2026-11-14" and "<today>20" in content  # the model is told today's date to resolve "next Friday"
 
 
 def test_extract_slots_tolerates_an_unparseable_model_reply(mock):
@@ -135,7 +137,7 @@ def test_assistant_tool_loop_through_the_real_sdk(client, db, auth, trip, mock):
 
     first, second = m.requests
     assert first["model"] == config.CHAT_MODEL and {t["name"] for t in first["tools"]} == {
-        "mark_visited", "log_expense", "get_summary", "update_plan"}
+        "mark_visited", "log_expense", "get_summary", "update_plan", "set_trip_dates"}
     assert all(t["input_schema"]["type"] == "object" for t in first["tools"])
     last = second["messages"][-1]
     assert last["role"] == "user" and last["content"][0]["type"] == "tool_result"

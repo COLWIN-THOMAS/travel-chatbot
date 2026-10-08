@@ -11,7 +11,7 @@ from app import config
 from app.models.day import Day
 from app.models.itinerary_item import ItineraryItem
 from app.models.trip import Trip
-from app.services import google_places, llm
+from app.services import dates, google_places, llm
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +45,7 @@ Hard constraints:
 - Each day has 4-7 items in chronological order: breakfast, lunch and dinner as category "restaurant"; sightseeing as "attraction"; local getting around as "transport"; and a place to sleep as "hotel" (the nightly rate) on every day EXCEPT the last day.
 - Prefer real places from the candidate lists; you may add other well-known real places. Use realistic prices; free attractions cost 0.
 - Tailor the plan to the traveller's preferences and keep each day geographically sensible.
+- If a travel_start_date is given, day 1 is that date: account for season, weather and typical closures on those weekdays.
 - notes: at most one short practical tip per item, or null."""
 
 
@@ -103,6 +104,7 @@ def _request_plan(slots: dict, candidates: str, feedback: Optional[str]) -> Itin
                 "budget_total": slots["budget_total"],
                 "days_count": slots["days_count"],
                 "preferences": slots.get("preferences") or [],
+                "travel_start_date": slots.get("start_date"),
                 "extra_instructions": llm.wrap_user_text(slots.get("instructions") or ""),
             },
             ensure_ascii=False,
@@ -145,13 +147,11 @@ def create_plan(slots: dict, attempts: int = 2) -> ItineraryPlan:
     raise PlanError(" ".join(problems))
 
 
-def save_plan(db: Session, trip: Trip, plan: ItineraryPlan) -> None:
-    """Replace the trip's itinerary with `plan`. Caller commits."""
-    for day in db.query(Day).filter(Day.trip_id == trip.id).all():
-        db.delete(day)
-    db.flush()
+def _insert_days(db: Session, trip: Trip, plan: ItineraryPlan, day_offset: int) -> None:
+    """Insert `plan`'s days, renumbered to start at `day_offset` (plan day 1 -> day_offset, day 2 -> day_offset+1, ...)."""
     for d in sorted(plan.days, key=lambda x: x.day_number):
-        day = Day(id=uuid.uuid4(), trip_id=trip.id, day_number=d.day_number)
+        number = day_offset + d.day_number - 1
+        day = Day(id=uuid.uuid4(), trip_id=trip.id, day_number=number, date=dates.day_date(trip.start_date, number))
         db.add(day)
         db.flush()
         for order, item in enumerate(d.items, start=1):
@@ -166,4 +166,21 @@ def save_plan(db: Session, trip: Trip, plan: ItineraryPlan) -> None:
                     notes=(item.notes or None) and item.notes.strip()[:300],
                 )
             )
+
+
+def save_plan(db: Session, trip: Trip, plan: ItineraryPlan) -> None:
+    """Replace the WHOLE trip's itinerary with `plan`. Caller commits."""
+    for day in db.query(Day).filter(Day.trip_id == trip.id).all():
+        db.delete(day)
+    db.flush()
+    _insert_days(db, trip, plan, day_offset=1)
     trip.status = "active"
+
+
+def replace_days_from(db: Session, trip: Trip, plan: ItineraryPlan, from_day_number: int) -> None:
+    """Replace only the days from `from_day_number` onward (earlier/completed days are untouched).
+    Used by the automatic budget rebalancer. Caller commits."""
+    for day in db.query(Day).filter(Day.trip_id == trip.id, Day.day_number >= from_day_number).all():
+        db.delete(day)
+    db.flush()
+    _insert_days(db, trip, plan, day_offset=from_day_number)

@@ -11,3 +11,12 @@ export function confirmAction(title: string, message: string, confirmLabel: stri
     { text: confirmLabel, style: 'destructive', onPress: onConfirm },
   ]);
 }
+
+/** Plain info popup (no choice to make) — used for the automatic budget-rebalance notice. */
+export function notify(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(`${title}\n\n${message}`);
+    return;
+  }
+  Alert.alert(title, message);
+}

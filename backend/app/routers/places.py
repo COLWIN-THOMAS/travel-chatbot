@@ -11,7 +11,7 @@ from app.models.trip import Trip
 from app.models.user import User
 from app.schemas.places import PlaceDetail, PlacesListResponse, PlaceSummary, ReviewSummary
 from app.security import sign_photo, verify_photo
-from app.services import google_places
+from app.services import deep_links, google_places
 
 router = APIRouter(prefix="/places", tags=["places"])
 
@@ -52,10 +52,13 @@ def get_place_detail(place_id: str, user: User = Depends(get_current_user)):
         )
         for r in raw.get("reviews", [])
     ]
+    loc = raw.get("location") or {}
     return PlaceDetail(
         id=raw.get("id", place_id),
         name=(raw.get("displayName") or {}).get("text", "Unknown"),
         address=raw.get("formattedAddress"),
+        lat=loc.get("latitude"),
+        lon=loc.get("longitude"),
         rating=raw.get("rating"),
         price_level=_clean_price_level(raw.get("priceLevel")),
         opening_hours=(raw.get("currentOpeningHours") or {}).get("weekdayDescriptions"),
@@ -73,16 +76,31 @@ def get_places(
     trip: Trip = Depends(get_owned_trip),
 ):
     raw_places = google_places.search_places(trip.destination, category)
+    places = []
+    for p in raw_places:
+        loc = p.get("location") or {}
+        places.append(PlaceSummary(
+            id=p["id"],
+            name=(p.get("displayName") or {}).get("text", "Unknown"),
+            category=category,
+            price_level=_clean_price_level(p.get("priceLevel")),
+            rating=p.get("rating"),
+            address=p.get("formattedAddress"),
+            lat=loc.get("latitude"),
+            lon=loc.get("longitude"),
+        ))
+    return {"places": places}
+
+
+@router.get("/detail/{place_id}/ride-link")
+def get_ride_link(place_id: str, name: str = Query(..., max_length=200), user: User = Depends(get_current_user)):
+    """A ride-hailing link to this specific place, pickup = the rider's current location.
+    Uses coordinates already looked up for the place; call /places/detail/{place_id} first."""
+    raw = google_places.get_place_details(place_id)
+    loc = raw.get("location") or {}
+    if loc.get("latitude") is None:
+        raise HTTPException(status_code=422, detail="This place has no location on file")
     return {
-        "places": [
-            PlaceSummary(
-                id=p["id"],
-                name=(p.get("displayName") or {}).get("text", "Unknown"),
-                category=category,
-                price_level=_clean_price_level(p.get("priceLevel")),
-                rating=p.get("rating"),
-                address=p.get("formattedAddress"),
-            )
-            for p in raw_places
-        ]
+        "uber": deep_links.uber_ride_to(loc["latitude"], loc["longitude"], name),
+        "rapido": deep_links.rapido_ride("My location", name),
     }

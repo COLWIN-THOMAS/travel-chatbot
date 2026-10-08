@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
-import { FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, FlatList, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Badge, Button, Card, SectionTitle, StateView } from '../../components/ui';
 import { photoUrl } from '../../lib/api';
 import { isBudgetFriendly, priceTier } from '../../lib/format';
-import { usePlaceDetail } from '../../lib/hooks';
+import { useRideLink, usePlaceDetail } from '../../lib/hooks';
+import { openDeepLink } from '../../lib/openLink';
 import { colors, space } from '../../lib/theme';
 
 const HERO_HEIGHT = 240;
@@ -36,6 +37,10 @@ export default function PlaceDetailScreen() {
   const [hoursOpen, setHoursOpen] = useState(false);
 
   const title = place.data?.name ?? name ?? 'Place details';
+  // Hooks must run unconditionally on every render, so this is called before the loading/error
+  // return below; it no-ops (via `enabled`) until place.data is actually there.
+  const rideLinks = useRideLink(place.data?.id ?? '', place.data?.name ?? '');
+
   if (place.isLoading || place.error) {
     return (
       <>
@@ -50,6 +55,19 @@ export default function PlaceDetailScreen() {
   const hours = p.opening_hours ?? [];
   const reviews = allReviews ? p.reviews : p.reviews.slice(0, REVIEWS_COLLAPSED);
   const website = p.website && /^https?:\/\//i.test(p.website) ? p.website : null;
+
+  async function getARide(service: 'uber' | 'rapido') {
+    const link = rideLinks.data?.[service];
+    if (!link) return;
+    if (!link.prefilled) {
+      // Rapido: no deep link exists (see backend app/services/deep_links.py) - say so rather
+      // than silently opening a generic page that looks like it should have worked.
+      const msg = "Rapido doesn't offer a link that opens with this destination filled in — opening their site so you can search there.";
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Heads up', msg);
+    }
+    await openDeepLink(link);
+  }
 
   return (
     <>
@@ -101,6 +119,26 @@ export default function PlaceDetailScreen() {
           </View>
           {p.description ? <Text style={styles.description}>{p.description}</Text> : null}
 
+          {p.lat != null && p.lon != null ? (
+            <View style={styles.rideRow}>
+              <Button
+                testID="ride-uber"
+                label="Get a ride (Uber)"
+                variant="secondary"
+                icon="car-outline"
+                loading={rideLinks.isLoading}
+                onPress={() => getARide('uber')}
+                style={{ flex: 1 }}
+              />
+              <Button
+                testID="ride-rapido"
+                label="Rapido"
+                variant="ghost"
+                onPress={() => getARide('rapido')}
+              />
+            </View>
+          ) : null}
+
           <Card style={{ gap: space.sm }}>
             {p.address ? <InfoRow icon="location-outline" label="Address" text={p.address} /> : null}
             {p.phone ? <InfoRow icon="call-outline" label="Phone" text={p.phone} onPress={() => Linking.openURL(`tel:${p.phone!.replace(/[^\d+]/g, '')}`)} /> : null}
@@ -143,6 +181,7 @@ export default function PlaceDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  rideRow: { flexDirection: 'row', gap: space.sm, alignItems: 'center' },
   hero: { backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', gap: space.sm },
   dots: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.6)' },

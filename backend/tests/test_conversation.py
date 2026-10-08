@@ -1,10 +1,13 @@
 import uuid
+from datetime import timedelta
 
 from app.services import conversation, llm, planner
 from app.services.conversation import inr, merge_slots, recap
+from app.services.dates import today_ist
 from tests.conftest import sample_plan
 
 E = llm.Extraction
+START = (today_ist() + timedelta(days=10)).isoformat()  # always a valid future date
 
 
 def say(client, auth, sid, text):
@@ -25,9 +28,10 @@ def test_inr_formatting_uses_indian_grouping():
 
 
 def test_merge_slots_validates_and_reports_changes():
-    slots, changed, errors = merge_slots({}, E(destination=" Goa ", budget_total=15000, days_count=4, preferences=["Food", "food", "Adventure"]))
-    assert slots == {"destination": "Goa", "budget_total": 15000.0, "days_count": 4, "preferences": ["food", "adventure"]}
-    assert set(changed) == {"destination", "budget_total", "days_count", "preferences"} and not errors
+    slots, changed, errors = merge_slots({}, E(destination=" Goa ", budget_total=15000, days_count=4, start_date=START, preferences=["Food", "food", "Adventure"]))
+    assert slots == {"destination": "Goa", "budget_total": 15000.0, "days_count": 4, "start_date": START,
+                     "preferences": ["food", "adventure"]}
+    assert set(changed) == {"destination", "budget_total", "days_count", "start_date", "preferences"} and not errors
 
     _, changed, errors = merge_slots(slots, E(destination="Goa"))  # unchanged value is not a change
     assert changed == {} and errors == []
@@ -42,6 +46,7 @@ def test_happy_path_collect_confirm_generate(client, auth, fake_llm):
         E(destination="Goa"),
         E(budget_total=15000),
         E(days_count=3),
+        E(start_date=START),
         E(preferences=["food", "beaches"]),
         E(is_confirmation=True),
     ]
@@ -52,11 +57,14 @@ def test_happy_path_collect_confirm_generate(client, auth, fake_llm):
     r = say(client, auth, sid, "15k")
     assert "days" in r["reply_text"].lower()
     r = say(client, auth, sid, "3 days")
-    assert "enjoy" in r["reply_text"].lower()
+    assert "which day do you start" in r["reply_text"].lower() and r["next_field"] == "start_date"
+    r = say(client, auth, sid, "in ten days")
+    assert "enjoy" in r["reply_text"].lower() and r["next_field"] == "preferences"
 
     r = say(client, auth, sid, "food and beaches")
     assert r["conversation_state"] == "CONFIRM"
     assert "Goa" in r["reply_text"] and "₹15,000" in r["reply_text"] and r["itinerary"] is None
+    assert "Dates:" in r["reply_text"] and r["next_field"] is None
 
     r = say(client, auth, sid, "yes")
     assert r["conversation_state"] == "GENERATE_PLAN"
@@ -66,13 +74,15 @@ def test_happy_path_collect_confirm_generate(client, auth, fake_llm):
     # the trip exists, belongs to the user, and the whole conversation is linked to it
     trip = client.get("/trips/" + r["trip_id"], headers=auth.headers).json()
     assert trip["status"] == "active" and trip["preferences"] == ["food", "beaches"]
+    assert trip["start_date"] == START and trip["phase"] == "upcoming"
+    assert [d["date"] for d in trip["days"]] == [(today_ist() + timedelta(days=10 + k)).isoformat() for k in range(3)]
     hist = client.get("/chat/" + sid, headers=auth.headers).json()
     assert hist["state"] == "POST_PLAN" and hist["trip_id"] == r["trip_id"]
-    assert [m["role"] for m in hist["messages"]] == ["user", "assistant"] * 5
+    assert [m["role"] for m in hist["messages"]] == ["user", "assistant"] * 6
 
 
 def test_everything_in_one_message_goes_straight_to_confirm(client, auth, fake_llm):
-    fake_llm.extractions = [E(destination="Delhi", budget_total=8000, days_count=2, preferences=["culture"])]
+    fake_llm.extractions = [E(destination="Delhi", budget_total=8000, days_count=2, start_date=START, preferences=["culture"])]
     r = say(client, auth, new_sid(), "Delhi, 8k, 2 days, culture")
     assert r["conversation_state"] == "CONFIRM" and "Shall I build the plan" in r["reply_text"]
 
@@ -86,7 +96,7 @@ def test_confirm_is_never_skipped_even_if_llm_says_confirmation_early(client, au
 def test_editing_at_confirm_reuses_extraction_and_recaps(client, auth, fake_llm):
     sid = new_sid()
     fake_llm.extractions = [
-        E(destination="Goa", budget_total=10000, days_count=2, preferences=["food"]),
+        E(destination="Goa", budget_total=10000, days_count=2, start_date=START, preferences=["food"]),
         E(budget_total=20000),
     ]
     say(client, auth, sid, "goa 10k 2 days food")
@@ -122,7 +132,7 @@ def test_invalid_values_get_a_specific_message_not_a_fallback(client, auth, fake
 
 def test_plan_failure_keeps_user_at_confirm_without_creating_a_trip(client, auth, fake_llm):
     sid = new_sid()
-    fake_llm.extractions = [E(destination="Goa", budget_total=100, days_count=5, preferences=["food"]), E(is_confirmation=True)]
+    fake_llm.extractions = [E(destination="Goa", budget_total=100, days_count=5, start_date=START, preferences=["food"]), E(is_confirmation=True)]
     say(client, auth, sid, "goa 100 rupees 5 days food")
     fake_llm.plan_error = planner.PlanError("too tight")
     r = say(client, auth, sid, "yes")

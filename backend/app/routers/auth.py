@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -7,6 +8,10 @@ from app.deps import get_current_user
 from app.models.user import User
 from app.schemas.auth import Credentials, TokenResponse, UserOut
 from app.security import create_access_token, hash_password, login_throttle, verify_password
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str  # re-confirmation: a leaked/stale token alone must not be enough to delete the account
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,3 +49,14 @@ def login(payload: Credentials, request: Request, db: Session = Depends(get_db))
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)):
     return user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(payload: DeleteAccountRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Permanently deletes the account and everything linked to it: trips, itinerary items,
+    expenses, chat sessions and messages (all cascade via the database's foreign keys). This
+    cannot be undone. See docs/privacy.md."""
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    db.delete(user)
+    db.commit()

@@ -25,6 +25,7 @@ class ChatResponse(BaseModel):
     reply_text: str
     conversation_state: str
     extracted_fields: Dict[str, Any] = {}
+    next_field: Optional[str] = None
     trip_id: Optional[uuid.UUID] = None
     itinerary: Optional[ItineraryResponse] = None
     actions: List[str] = []
@@ -42,5 +43,6 @@ class ChatHistoryResponse(BaseModel):
     session_id: uuid.UUID
     state: str
     slots: Dict[str, Any] = {}
+    next_field: Optional[str] = None
     trip_id: Optional[uuid.UUID] = None
     messages: List[ChatMessageOut] = []

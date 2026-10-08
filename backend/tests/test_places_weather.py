@@ -135,3 +135,40 @@ def test_weather_unknown_place_is_502(client, auth, trip, monkeypatch):
     _reset_weather_caches()
     monkeypatch.setattr(weather, "_get_json", _fake_get(geo=[]))
     assert client.get("/weather/" + trip.id, headers=auth.headers).status_code == 502
+
+
+def test_places_list_includes_coordinates(client, auth, trip, monkeypatch):
+    raw_with_loc = [{**RAW_SEARCH[0], "location": {"latitude": 15.3, "longitude": 73.8}}]
+    monkeypatch.setattr(google_places, "search_places", lambda dest, cat: raw_with_loc)
+    r = client.get(f"/places/{trip.id}?category=restaurant", headers=auth.headers)
+    place = r.json()["places"][0]
+    assert place["lat"] == 15.3 and place["lon"] == 73.8
+
+
+def test_place_detail_includes_coordinates(client, auth, monkeypatch):
+    detail_with_loc = {**RAW_DETAIL, "location": {"latitude": 15.3005, "longitude": 73.8012}}
+    monkeypatch.setattr(google_places, "get_place_details", lambda pid: detail_with_loc)
+    r = client.get("/places/detail/ChIJabcdefghij1", headers=auth.headers)
+    body = r.json()
+    assert body["lat"] == 15.3005 and body["lon"] == 73.8012
+
+
+def test_ride_link_endpoint(client, auth, monkeypatch):
+    detail_with_loc = {**RAW_DETAIL, "location": {"latitude": 15.3, "longitude": 73.8}}
+    monkeypatch.setattr(google_places, "get_place_details", lambda pid: detail_with_loc)
+    r = client.get("/places/detail/ChIJabcdefghij1/ride-link", headers=auth.headers, params={"name": "Thalassa"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["uber"]["app_url"].startswith("uber://riderequest")
+    assert "pickup=my_location" in body["uber"]["app_url"]
+    assert body["rapido"]["app_url"] is None
+
+
+def test_ride_link_without_location_is_422(client, auth, monkeypatch):
+    monkeypatch.setattr(google_places, "get_place_details", lambda pid: RAW_DETAIL)  # no location key
+    r = client.get("/places/detail/ChIJabcdefghij1/ride-link", headers=auth.headers, params={"name": "Thalassa"})
+    assert r.status_code == 422
+
+
+def test_ride_link_requires_auth(client):
+    assert client.get("/places/detail/x/ride-link", params={"name": "y"}).status_code == 401

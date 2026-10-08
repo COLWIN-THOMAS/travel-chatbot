@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Numeric, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Numeric, Date, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.sql import func
 from app.database import Base
@@ -12,6 +12,7 @@ class Trip(Base):
     destination = Column(String, nullable=False)
     budget_total = Column(Numeric, nullable=False)
     days_count = Column(Integer, nullable=False)
+    start_date = Column(Date, nullable=True)  # NULL = dates not decided yet; day k falls on start_date + (k-1)
     preferences = Column(ARRAY(String))
     status = Column(String, nullable=False, default="planning")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

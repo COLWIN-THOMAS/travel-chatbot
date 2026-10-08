@@ -19,18 +19,20 @@ const SessionContext = createContext<SessionValue | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const storageKey = user ? `chat:${user.id}` : null;
-  const [ready, setReady] = useState(false);
   const [state, setState] = useState<Persisted>({ sessionId: uuid4(), activeTripId: null });
+  // "ready" is derived, not its own flag: it's only true once a load has completed for the CURRENT
+  // storageKey, so it naturally goes back to false the instant storageKey changes (e.g. on sign-in).
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const ready = storageKey !== null && loadedKey === storageKey;
 
   useEffect(() => {
     if (!storageKey) return;
     let cancelled = false;
-    setReady(false);
     appStore.getJson<Persisted>(storageKey).then((saved) => {
       if (cancelled) return;
       if (saved?.sessionId) setState({ sessionId: saved.sessionId, activeTripId: saved.activeTripId ?? null });
       else setState({ sessionId: uuid4(), activeTripId: null });
-      setReady(true);
+      setLoadedKey(storageKey);
     });
     return () => { cancelled = true; };
   }, [storageKey]);

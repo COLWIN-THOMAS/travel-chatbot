@@ -25,10 +25,30 @@ class ExpenseOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ItineraryNotice(BaseModel):
+    rebalanced: bool
+    message: str
+    days_from: Optional[int] = None
+    days_to: Optional[int] = None
+
+
+class VisitResult(BaseModel):
+    id: uuid.UUID
+    place_name: str
+    category: str
+    estimated_cost: float
+    actual_cost: float = 0.0
+    visited: bool
+    order_in_day: int
+    notes: Optional[str] = None
+    itinerary_notice: Optional[ItineraryNotice] = None
+
+
 class ExpenseLogResponse(BaseModel):
     expense: ExpenseOut
     spend_total: float
     budget_remaining: float
+    itinerary_notice: Optional[ItineraryNotice] = None
 
 
 class TrackerSummary(BaseModel):

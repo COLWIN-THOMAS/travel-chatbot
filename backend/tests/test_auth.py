@@ -76,3 +76,41 @@ def test_throttle_window_expires(monkeypatch):
     assert t.blocked("k")
     now[0] += 61
     assert not t.blocked("k")
+
+
+def test_delete_account_requires_correct_password(client, auth):
+    r = client.request("DELETE", "/auth/me", headers=auth.headers, json={"password": "wrong-password"})
+    assert r.status_code == 401
+    assert client.get("/auth/me", headers=auth.headers).status_code == 200  # account still exists
+
+
+def test_delete_account_removes_everything(client, db, auth, trip):
+    import uuid
+    from app.models.chat_session import ChatSession
+
+    sid = uuid.uuid4()
+    db.add(ChatSession(id=sid, user_id=uuid.UUID(auth.user["id"]), state="COLLECTING", slots={}))
+    db.flush()
+
+    r = client.request("DELETE", "/auth/me", headers=auth.headers, json={"password": "password123"})
+    assert r.status_code == 204
+
+    assert client.get("/auth/me", headers=auth.headers).status_code == 401  # token no longer resolves to anyone
+    assert client.post("/auth/login", json={"email": auth.user["email"], "password": "password123"}).status_code == 401
+
+    from app.models.trip import Trip
+    from app.models.day import Day
+    from app.models.chat_session import ChatSession as CS
+    assert db.get(Trip, uuid.UUID(trip.id)) is None
+    assert db.query(Day).filter(Day.trip_id == uuid.UUID(trip.id)).count() == 0
+    assert db.get(CS, sid) is None
+
+
+def test_deleting_one_account_does_not_touch_another(client, auth):
+    other, other_user = register(client, "safe@example.com")
+    client.post("/trips", headers=other, json={"destination": "Delhi", "budget_total": 5000, "days_count": 2})
+
+    client.request("DELETE", "/auth/me", headers=auth.headers, json={"password": "password123"})
+
+    assert client.get("/auth/me", headers=other).status_code == 200
+    assert len(client.get("/trips", headers=other).json()) == 1

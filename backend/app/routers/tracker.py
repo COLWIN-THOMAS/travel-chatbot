@@ -11,14 +11,15 @@ from app.models.day import Day
 from app.models.expense import Expense
 from app.models.itinerary_item import ItineraryItem
 from app.models.trip import Trip
-from app.schemas.itinerary_item import ItineraryItemResponse
 from app.schemas.tracker import (
     ExpenseCreate,
     ExpenseLogResponse,
     ExpenseOut,
     TrackerSummary,
+    VisitResult,
     VisitUpdate,
 )
+from app.services import rebalance
 from app.services.itinerary_view import spend_total
 
 router = APIRouter(prefix="/tracker", tags=["tracker"])
@@ -47,15 +48,22 @@ def _item_view(db: Session, item: ItineraryItem) -> dict:
     }
 
 
-@router.post("/{trip_id}/visit", response_model=ItineraryItemResponse)
+@router.post("/{trip_id}/visit", response_model=VisitResult)
 def mark_visited(payload: VisitUpdate, trip: Trip = Depends(get_owned_trip), db: Session = Depends(get_db)):
     item = _trip_item(db, trip.id, payload.itinerary_item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Itinerary item not found for this trip")
     item.visited = payload.visited
+    db.flush()
+
+    # Visiting a place can shift which days count as "already started", which can itself
+    # change whether the remaining days still fit the remaining budget.
+    notice = rebalance.maybe_rebalance(db, trip)
     db.commit()
-    db.refresh(item)
-    return _item_view(db, item)
+
+    view = _item_view(db, item)
+    view["itinerary_notice"] = notice
+    return view
 
 
 @router.post("/{trip_id}/expense", response_model=ExpenseLogResponse, status_code=201)
@@ -70,11 +78,19 @@ def log_expense(payload: ExpenseCreate, trip: Trip = Depends(get_owned_trip), db
         itinerary_item_id=payload.itinerary_item_id,
     )
     db.add(expense)
+    db.flush()
+
+    notice = rebalance.maybe_rebalance(db, trip)
     db.commit()
     db.refresh(expense)
 
     total = spend_total(db, trip.id)
-    return {"expense": expense, "spend_total": total, "budget_remaining": float(trip.budget_total) - total}
+    return {
+        "expense": expense,
+        "spend_total": total,
+        "budget_remaining": float(trip.budget_total) - total,
+        "itinerary_notice": notice,
+    }
 
 
 @router.get("/{trip_id}/expenses", response_model=List[ExpenseOut])

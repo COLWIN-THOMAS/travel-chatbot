@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, router } from 'expo-router';
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { ChatBubble, TypingBubble } from '../../components/ChatBubble';
+import { DatePicker } from '../../components/DatePicker';
 import { HeaderActions } from '../../components/HeaderActions';
 import { Button, Chip, InlineError, StateView } from '../../components/ui';
+import { formatLong } from '../../lib/dates';
 import { useChat } from '../../lib/hooks';
 import { useChatSession } from '../../lib/session';
 import { colors, radius, space } from '../../lib/theme';
@@ -15,7 +17,7 @@ const MAX_LEN = 1000;
 const GREETING: ChatMessage = {
   role: 'assistant',
   content:
-    "Hi! I'm your budget trip planner. Tell me where you'd like to go, your total budget and how many days – for example \"Goa, ₹15,000, 4 days, love food and beaches\". I'll build a day-by-day plan that fits.",
+    "Hi! I'm your budget trip planner. Tell me where you'd like to go, your total budget, how many days and when you'd like to start – for example \"Goa, ₹15,000, 4 days, love food and beaches\". I'll build a day-by-day plan that fits.",
 };
 
 const STARTERS = ['Plan a trip to Goa', 'Delhi weekend under ₹8,000', 'Noida, 2 days, ₹5,000', 'Gurugram 3 days, love food'];
@@ -26,6 +28,7 @@ export default function ChatScreen() {
   const { newChat } = useChatSession();
   const chat = useChat();
   const [text, setText] = useState('');
+  const [picking, setPicking] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -52,6 +55,7 @@ export default function ChatScreen() {
   const fresh = chat.messages.length === 0;
   const confirming = chat.state === 'CONFIRM';
   const planReady = chat.state === 'POST_PLAN' && !!chat.tripId;
+  const askingDates = chat.nextField === 'start_date' && !confirming && !planReady;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
@@ -75,10 +79,17 @@ export default function ChatScreen() {
         {fresh && !chat.sending
           ? STARTERS.map((s) => <Chip key={s} label={s} onPress={() => send(s)} />)
           : null}
+        {askingDates && !chat.sending ? (
+          <>
+            <Button testID="pick-dates" label="Pick dates on calendar" icon="calendar" onPress={() => setPicking(true)} />
+            <Chip label="Not decided yet" onPress={() => send("I haven't decided the dates yet")} />
+          </>
+        ) : null}
         {confirming && !chat.sending ? (
           <>
             <Button testID="confirm-plan" label="Yes, build my plan" icon="checkmark-circle" onPress={() => send('yes')} />
             <Button label="Change something" variant="secondary" onPress={() => inputRef.current?.focus()} />
+            <Chip testID="change-dates" label="Change dates" icon="calendar-outline" onPress={() => setPicking(true)} />
           </>
         ) : null}
         {planReady && !chat.sending ? (
@@ -123,6 +134,14 @@ export default function ChatScreen() {
           <Ionicons name="send" size={20} color="#fff" />
         </Pressable>
       </View>
+
+      <DatePicker
+        visible={picking}
+        value={chat.slots.start_date && chat.slots.start_date !== 'undecided' ? chat.slots.start_date : null}
+        daysCount={chat.slots.days_count ?? 1}
+        onClose={() => setPicking(false)}
+        onConfirm={(iso) => { setPicking(false); void send(`I start on ${formatLong(iso)}`); }}
+      />
     </KeyboardAvoidingView>
   );
 }
